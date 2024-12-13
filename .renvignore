@@ -1,0 +1,3 @@
+# Ignore Python-scraping directory
+./scripts/01-scrape-nics/*
+./data*

@@ -1,0 +1,12 @@
+# Products of the NICS scraping
+./scripts/01-scrape-nics/charts/*
+./scripts/01-scrape-nics/data/*
+./scripts/01-scrape-nics/pdfs/*
+./scripts/01-scrape-nics/venv/*
+
+# Cleaned data
+./data/clean/*
+
+# Products of analyses
+./exhibits/*
+
