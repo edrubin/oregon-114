@@ -1,5 +1,6 @@
 # Notes ----------------------------------------------------------------------------------
 #   Goal:   Define groups of states (e.g., permit-to-purchase, point-of-contact, etc.)
+#   Note:   Used by other scripts; does not produce any output.
 
 # Define sets of states ------------------------------------------------------------------
   # States to always drop due to coincident changes in laws/data
