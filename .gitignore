@@ -10,3 +10,7 @@ data/clean/*
 # Products of analyses
 exhibits/*
 
+# Miscellany
+*.DS_Store
+*Icon?
+.Rprofile

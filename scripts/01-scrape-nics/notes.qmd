@@ -1,0 +1,15 @@
+
+Set up a virtual environment for the project.
+
+```{zsh}
+# Create a virtual environment
+python3 -m venv venv
+source venv/bin/activate
+```
+
+Run the Makefile to update (or build) the dataset.
+
+```{zsh}
+# Update the dataset
+make update
+```
