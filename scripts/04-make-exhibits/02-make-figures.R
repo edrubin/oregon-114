@@ -1159,6 +1159,130 @@
     height = 7.5
   )
 
+# Appendix: Long-run time series, Oregon vs. others, with data switch --------------------
+  # Define dates of interest with labels
+  date_dt =
+    list(
+      data.table(d = '20081104', l = 'Obama elected'),
+      data.table(d = '20121214', l = 'Sandy Hook'),
+      data.table(d = '20141202', l = 'San Bernardino'),
+      data.table(d = '20180214', l = 'Parkland'),
+      data.table(d = '20200120', l = 'COVID-19 begins'),
+      # data.table(d = '20220524', l = 'Uvalde'),
+      data.table(d = '20221108', l = 'Meas. 114'),
+      NULL
+    ) |> rbindlist()
+  date_dt[, d := ymd(d)]
+  # Load the FBI data
+  bgc_data =
+    here('data', 'clean', 'background-checks', 'bgc-fbi-200001-202403.csv') |>
+    fread()
+  # Load the OSP data
+  osp_dt =
+    here('data', 'clean', 'background-checks', 'bgc-osp-201802-202404.csv') |>
+    fread()
+  # Make monthly dataset
+  osp_dt %<>% .[day(date) == 1 & county == 'Multnomah', .(
+    year,
+    month,
+    grp = 'Oregon',
+    bgc = month_total,
+    pop = state_population,
+    rate = month_total / state_population * 1e5,
+    date
+  )]
+  # Drop Alabama and North Carolina
+  bgc_data %<>% .[!(state %in% drop_states)]
+  # Sum BGCs and population by month and OR vs. non-OR
+  bgc_dt = bgc_data[, .(
+    bgc = sum(totals_standard_sales),
+    pop = sum(population)
+  ), by = .(year, month, grp = ifelse(state == 'Oregon', 'OR', 'Non-OR'))]
+  bgc_dt[, `:=`(
+    grp =
+      factor(
+        grp,
+        levels = c('OR', 'Non-OR'),
+        labels = c('Oregon', 'Others'),
+        ordered = TRUE
+      )
+  )]
+  # Match classes
+  osp_dt[, `:=`(
+    grp =
+      factor(
+        grp,
+        levels = c('OR', 'Non-OR'),
+        labels = c('Oregon', 'Others'),
+        ordered = TRUE
+      ),
+      date = date |> ymd()
+  )]
+  # Calculate BGC rate per 100k
+  bgc_dt[, rate := bgc / pop * 1e5]
+  # Fix date
+  bgc_dt[, date := ymd(paste0(year, '-', month, '-01'))]
+  # Drop dates to desired range
+  d1 = ymd(20050101)
+  dn = ymd(20231231)
+  # Impose date restrictions
+  bgc_dt %<>% .[between(date, d1, dn)]
+  osp_dt %<>% .[between(date, d1, dn)]
+  date_dt %<>% .[between(d, d1, dn)]
+  # Order
+  setorder(bgc_dt, grp, date)
+  setorder(osp_dt, date)
+  # Replace NICS in Oregon 2019 onward with OSP data
+  switch_dt =
+    rbindlist(list(
+      bgc_dt[!((year >= 2019) & (grp == 'OR'))],
+      osp_dt[(year >= 2019) & (grp == 'Oregon')]
+    ), use.names = TRUE, fill = TRUE)
+  # Time-series figure
+  gg_tmp =
+    ggplot(
+      data = switch_dt,
+      aes(x = date, y = rate)
+    ) +
+    # Axis
+    geom_hline(yintercept = 0, linewidth = .25) +
+    # Dates
+    geom_vline(
+      data = date_dt,
+      aes(xintercept = d),
+      linewidth = 2,
+      alpha = .3,
+      color = col_wk[6],
+    ) +
+    geom_text(
+      data = date_dt,
+      aes(x = d, y = 0, label = l),
+      hjust = -.01,
+      vjust = 1.8,
+      size = 4.5,
+      family = 'Fira Sans Condensed',
+      color = col_wk[6],
+    ) +
+    # Time series
+    geom_line(aes(color = grp, linewidth = grp)) +
+    # geom_point(size = 1.5) +
+    scale_x_date('Month of sample') +
+    scale_y_continuous('Background checks per 100k (FBI)', labels = comma) +
+    scale_color_manual('', values = c(col_trt, col_ctl)) +
+    scale_linewidth_manual('', values = c(.8, .6)) +
+    theme_minimal(base_size = 17, base_family = 'Fira Sans Condensed') +
+    theme(legend.position = 'bottom') +
+    guides(color = guide_legend(nrow = 1, override.aes = list(linewidth = 1)))
+  # Save plot with timeline
+  ggsave(
+    plot = gg_tmp,
+    path = here('exhibits', 'figures'),
+    filename = 'time-series-monthly-switch.png',
+    device = ragg::agg_png,
+    width = 11,
+    height = 7.5
+  )
+
 # Appendix: Compare OR time-series, FBI and OSP ------------------------------------------
   # Load data
   fbi_dt =
