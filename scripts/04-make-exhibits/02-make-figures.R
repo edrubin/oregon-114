@@ -15,6 +15,8 @@
   col_trt = viridis::magma(1e2)[40]
   col_ctl = 'grey72'
   col_qtl = viridis::magma(1e2)[c(1, 50, 70, 85)]
+  # Weekday colors
+  col_wk = viridis::magma(7, end = .93)
 
 # Define sets of states ------------------------------------------------------------------
   # Load definitions
@@ -683,8 +685,6 @@
   )
 
 # Figure: Daily OPS time series ----------------------------------------------------------
-  # Weekday colors
-  col_wk = viridis::magma(7, end = .93)
   # Define dates of interest with labels
   date_dt =
     list(
@@ -1209,13 +1209,6 @@
   )]
   # Match classes
   osp_dt[, `:=`(
-    grp =
-      factor(
-        grp,
-        levels = c('OR', 'Non-OR'),
-        labels = c('Oregon', 'Others'),
-        ordered = TRUE
-      ),
       date = date |> ymd()
   )]
   # Calculate BGC rate per 100k
@@ -1235,8 +1228,9 @@
   # Replace NICS in Oregon 2019 onward with OSP data
   switch_dt =
     rbindlist(list(
-      bgc_dt[!((year >= 2019) & (grp == 'OR'))],
-      osp_dt[(year >= 2019) & (grp == 'Oregon')]
+      bgc_dt[grp != 'Oregon'],
+      bgc_dt[grp == 'Oregon' & year < 2019],
+      osp_dt[year >= 2019]
     ), use.names = TRUE, fill = TRUE)
   # Time-series figure
   gg_tmp =
