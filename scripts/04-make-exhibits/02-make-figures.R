@@ -8,7 +8,7 @@
 # Setup ----------------------------------------------------------------------------------
   # Load packages
   pacman::p_load(
-    here, magrittr, data.table, lubridate,
+    here, magrittr, readxl, data.table, lubridate, sf,
     ggplot2, cowplot, scales, synthdid, viridis
   )
   # Define colors
@@ -17,6 +17,9 @@
   col_qtl = viridis::magma(1e2)[c(1, 50, 70, 85)]
   # Weekday colors
   col_wk = viridis::magma(7, end = .93)
+  # Civids but with purple and orange
+  # col_new = c('#4A148C', '#FFCC80')
+  col_new = c('#311B92', '#FFCC80')
 
 # Define sets of states ------------------------------------------------------------------
   # Load definitions
@@ -1335,3 +1338,129 @@
     width = 10,
     height = 7.5
   )
+
+# Appendix: Oregon county maps -----------------------------------------------------------
+  # Load shapefile and subset to Oregon
+  or_sf =
+    here('data', 'raw', 'us-county-shp', 'cb_2018_us_county_500k.shp') |>
+    st_read() |>
+    subset(STATEFP == '41')
+  # Load and clean support data (from NYT)
+  support_dt =
+    here('data', 'raw', 'election-results-114', 'election-results-nyt.xlsx') |>
+    read_xlsx()
+  setDT(support_dt)
+  support_dt %<>% .[, 1:4]
+  setnames(support_dt, c('county', 'yes', 'no', 'total'))
+  # Load and clean the OSP data (summarizing the 12 months before Meas. 114)
+  osp_dt =
+    here('data', 'clean', 'background-checks', 'bgc-osp-201802-202404.csv') |>
+    fread()
+  osp_dt %<>%
+    .[, .(county, month_date, pop = county_population, bgc = county_day_total)] %>%
+    .[month_date %in% seq.Date(from = ymd(20211001), to = ymd(20220930), by = '1 month')]
+  osp_dt %<>%
+    .[, .(pop = mean(pop), bgc = sum(bgc)), by = .(county)]
+  # Join data
+  or_dt = merge(support_dt, osp_dt, by = 'county', all = TRUE)
+  or_sf =
+    merge(
+      x = or_sf |> dplyr::select(county = NAME),
+      y = or_dt,
+      by = 'county',
+      all = TRUE
+    )
+  # Map 1: Meas. 114 support
+  gg1 =
+    ggplot(data = or_sf) +
+    geom_sf(aes(fill = yes), color = 'white', linewidth = .08) +
+    geom_sf(
+      data = or_sf |> subset(yes > 50),
+      fill = NA,
+      color = cividis(10)[10],
+      linewidth = .5,
+    ) +
+    scale_fill_gradient(
+      'Support for Meas. 114 (%)',
+      low = col_new[1],
+      high = col_new[2],
+      limit = c(10, 75)
+    ) +
+    theme_void(base_size = 10, base_family = 'Fira Sans Condensed') +
+    theme(
+      legend.position = 'bottom',
+      legend.key.width = unit(1.25, 'cm'),
+      legend.key.height = unit(.5, 'cm'),
+    ) +
+    guides(fill = guide_colorbar(title.position = 'top', title.hjust = 0)) +
+    coord_sf(default_crs = st_crs(2992))
+  # Map 2: Population
+  gg2 =
+    ggplot(data = or_sf) +
+    geom_sf(aes(fill = pop / 1e3), color = 'white', linewidth = .08) +
+    scale_fill_gradient(
+      'Population (log scale)',
+      low = col_new[1],
+      high = col_new[2],
+      trans = 'log',
+      breaks = c(2, 10, 50, 250, 750),
+      labels = function(x) comma(x) |> paste0('k')
+    ) +
+    theme_void(base_size = 10, base_family = 'Fira Sans Condensed') +
+    theme(
+      legend.position = 'bottom',
+      legend.key.width = unit(1.25, 'cm'),
+      legend.key.height = unit(.5, 'cm'),
+    ) +
+    guides(fill = guide_colorbar(title.position = 'top', title.hjust = 0)) +
+    coord_sf(default_crs = st_crs(2992))
+  # Map 3: Background checks per 100k residents
+  gg3 =
+    ggplot(data = or_sf) +
+    geom_sf(aes(fill = bgc / pop * 1e5), color = 'white', linewidth = .08) +
+    scale_fill_gradient(
+      'Annual firearm BGCs per 100k',
+      labels = comma,
+      low = col_new[1],
+      high = col_new[2],
+    ) +
+    theme_void(base_size = 10, base_family = 'Fira Sans Condensed') +
+    theme(
+      legend.position = 'bottom',
+      legend.key.width = unit(1.25, 'cm'),
+      legend.key.height = unit(.5, 'cm'),
+    ) +
+    guides(fill = guide_colorbar(title.position = 'top', title.hjust = 0)) +
+    coord_sf(default_crs = st_crs(2992))
+  # Map 4: Background checks (total)
+  gg4 =
+    ggplot(data = or_sf) +
+    geom_sf(aes(fill = bgc), color = 'white', linewidth = .08) +
+    scale_fill_gradient(
+      'Annual firearm BGCs (log scale)',
+      low = col_new[1],
+      high = col_new[2],
+      trans = 'log',
+      breaks = 10^seq(1, 5),
+      labels = comma
+    ) +
+    theme_void(base_size = 10, base_family = 'Fira Sans Condensed') +
+    theme(
+      legend.position = 'bottom',
+      legend.key.width = unit(1.25, 'cm'),
+      legend.key.height = unit(.5, 'cm'),
+    ) +
+    guides(fill = guide_colorbar(title.position = 'top', title.hjust = 0)) +
+    coord_sf(default_crs = st_crs(2992))
+  # Combine plots and save
+  theme_set(theme_cowplot(font_size = 10,font_family = 'Fira Sans Condensed'))
+  ggsave(
+    plot = plot_grid(gg1, gg2, gg3, gg4, ncol = 2, labels = 'AUTO'),
+    path = here('exhibits', 'figures'),
+    filename = 'maps-oregon.png',
+    device = ragg::agg_png,
+    dpi = 450,
+    width = 6.5,
+    height = 6
+  )
+
