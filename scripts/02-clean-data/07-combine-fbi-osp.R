@@ -36,7 +36,7 @@
   # Fix names
   names(oregon_bgc_data) = c('state', 'date', 'rate')
   # Slim down FBI data
-  state_bgc_data = state_bgc_data[ state != 'Oregon', ]
+  state_bgc_data = state_bgc_data[state != 'Oregon', ]
   state_bgc_data  %<>% select(state, date, rate_standard_sales)
   # Fix names
   names(state_bgc_data) = c('state', 'date', 'rate')

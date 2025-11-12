@@ -59,6 +59,19 @@
     )
   # Add cumulative effect
   tab = rbind(tab, res$accum_sdid |> comma(.1))
+  # Add SE for cumulative effect
+  tab = rbind(
+    tab,
+    c(
+      res$se_sdid[1] * 18,
+      res$se_sdid[2],
+      res$se_sdid[3] * 2,
+      res$se_sdid[4] * 3,
+      res$se_sdid[5] * 12
+    ) |>
+    comma(.1) |>
+    wrap()
+  )
   # Date information
   # tab = rbind(tab, res$dates)
   tab = rbind(
@@ -73,7 +86,7 @@
   )
   # Add row names
   tab = cbind(
-    c('Monthly effect', '', 'Accum. effect', 'Trt. period'),
+    c('Monthly effect', '', 'Accum. effect', '', 'Trt. period'),
     tab
   )
   # Add column names
@@ -114,7 +127,7 @@
       tab[-1]
     )
   # Add line spacing after rows with standard errors and accumulation effect
-  tab[6:7] = paste0(tab[6:7], '\\addlinespace')
+  tab[c(7, 9)] = paste0(tab[c(7, 9)], '\\addlinespace')
   # Save
   writeLines(
     text = tab,
@@ -134,7 +147,7 @@
       }
     )
   setDT(main_table)
-  setnames(main_table, paste0('c', 1:ncol(main_table)))
+  setnames(main_table, paste0('c', seq_len(ncol(main_table))))
   main_table = main_table[, lapply(.SD, as.character)]
   # Cumulative effects
   acc_table =
@@ -145,7 +158,7 @@
       }
     )
   setDT(acc_table)
-  setnames(acc_table, paste0('c', 1:ncol(acc_table)))
+  setnames(acc_table, paste0('c', seq_len(ncol(acc_table))))
   # Wrap SEs (even rows) in parentheses
   for (j in seq_len(ncol(main_table))) {
     set(
@@ -162,7 +175,7 @@
   main_table =
     cbind(
       data.table(
-        a = c(rbind(results_all$dates, rep('', main_table[, .N/2])))
+        a = c(rbind(results_all$dates, rep('', main_table[, .N / 2])))
       ),
       main_table
     )
@@ -226,10 +239,16 @@
   # Combine tables
   final_table = c(
     t1 |> head(5),
-    '\\multicolumn{5}{l}{\\hspace*{-.5em}\\textit{\\textbf{Panel A:} Monthly effect (per 100k)}} \\\\',
+    paste0(
+      '\\multicolumn{5}{l}{\\hspace*{-.5em}',
+      '\\textit{\\textbf{Panel A:} Monthly effect (per 100k)}} \\\\',
+    ),
     t1 |> tail(-5) |> head(-2),
     '\\midrule',
-    '\\multicolumn{5}{l}{\\hspace*{-.5em}\\textit{\\textbf{Panel B:} Accumulated effect (per 100k)}} \\\\',
+    paste0(
+      '\\multicolumn{5}{l}{\\hspace*{-.5em}',
+      '\\textit{\\textbf{Panel B:} Accumulated effect (per 100k)}} \\\\',
+    ),
     t2 |> tail(-5)
   )
   # Update alignment definition
@@ -277,17 +296,18 @@
         rbind(
           res[i, .(est_sdid, est_scm, est_did)] |> unlist() |> comma(.1),
           res[i, .(se_sdid, se_scm, se_did)] |> unlist() |> comma(.1) |> wrap()
-        ) |> as.data.table()
+        ) |>
+        as.data.table()
       }
     )
   setDT(main_table)
-  setnames(main_table, paste0('c', 1:ncol(main_table)))
+  setnames(main_table, paste0('c', seq_len(ncol(main_table))))
   main_table = main_table[, lapply(.SD, as.character)]
   # Cumulative effects
   acc_table = res[, .(accum_sdid, accum_scm, accum_did)]
   acc_table %<>% .[, lapply(.SD, comma, accuracy = .1)]
   setDT(acc_table)
-  setnames(acc_table, paste0('c', 1:ncol(acc_table)))
+  setnames(acc_table, paste0('c', seq_len(ncol(acc_table))))
   # Add column for time periods
   main_table =
     cbind(
@@ -325,10 +345,16 @@
   # Combine tables
   final_table = c(
     t1 |> head(5),
-    '\\multicolumn{4}{l}{\\hspace*{-.5em}\\textit{\\textbf{Panel A:} Monthly effect (per 100k)}} \\\\',
+    paste0(
+      '\\multicolumn{4}{l}{\\hspace*{-.5em}',
+      '\\textit{\\textbf{Panel A:} Monthly effect (per 100k)}} \\\\'
+    ),
     t1 |> tail(-5) |> head(-2),
     '\\midrule',
-    '\\multicolumn{4}{l}{\\hspace*{-.5em}\\textit{\\textbf{Panel B:} Accumulated effect (per 100k)}} \\\\',
+    paste0(
+      '\\multicolumn{4}{l}{\\hspace*{-.5em}',
+      '\\textit{\\textbf{Panel B:} Accumulated effect (per 100k)}} \\\\'
+    ),
     t2 |> tail(-5)
   )
   # Update alignment definition

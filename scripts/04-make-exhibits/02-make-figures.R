@@ -8,7 +8,7 @@
 # Setup ----------------------------------------------------------------------------------
   # Load packages
   pacman::p_load(
-    here, magrittr, readxl, data.table, lubridate, sf,
+    here, magrittr, tidyverse, readxl, data.table, lubridate, sf,
     ggplot2, cowplot, scales, synthdid, viridis
   )
   # Define colors
@@ -317,7 +317,7 @@
       # Add majority/minority variable
       main_dt[, support := ifelse(g == 0, '<50%', '>=50%')]
       # Return
-      return(main_dt)
+      main_dt
     }) |>
     rbindlist()
   # Calculate treatment effect by date-support
@@ -471,9 +471,9 @@
       T0 = setup$T0
       T1 = ncol(Y) - T0
       lambda.pre = c(weights$lambda, rep(0, T1))
-      lambda.post = c(rep(0, T0), rep(1/T1, T1))
+      lambda.post = c(rep(0, T0), rep(1 / T1, T1))
       omega.control = c(weights$omega, rep(0, N1))
-      omega.treat = c(rep(0, N0), rep(1/N1, N1))
+      omega.treat = c(rep(0, N0), rep(1 / N1, N1))
       difs = as.vector(t(omega.treat) %*% Y %*% (lambda.post - 
           lambda.pre)) - as.vector(Y[1:N0, ] %*% (lambda.post - 
           lambda.pre))
@@ -591,10 +591,10 @@
       # Add quartile
       main_dt[, q := q]
       # Return
-      return(main_dt)
+      main_dt
     }) |>
     rbindlist()
-  # Calculate treatment effect by date-quantile 
+  # Calculate treatment effect by date-quantile
   setorder(q_dt, q, x, group)
   q_dt %<>% .[, .(y = diff(y)), by = .(x, q)]
   # Plot
@@ -1196,6 +1196,8 @@
   )]
   # Drop Alabama and North Carolina
   bgc_data %<>% .[!(state %in% drop_states)]
+  # Drop border states
+  bgc_data %<>% .[!(state %in% border_states)]
   # Sum BGCs and population by month and OR vs. non-OR
   bgc_dt = bgc_data[, .(
     bgc = sum(totals_standard_sales),
@@ -1453,7 +1455,7 @@
     guides(fill = guide_colorbar(title.position = 'top', title.hjust = 0)) +
     coord_sf(default_crs = st_crs(2992))
   # Combine plots and save
-  theme_set(theme_cowplot(font_size = 10,font_family = 'Fira Sans Condensed'))
+  theme_set(theme_cowplot(font_size = 10, font_family = 'Fira Sans Condensed'))
   ggsave(
     plot = plot_grid(gg1, gg2, gg3, gg4, ncol = 2, labels = 'AUTO'),
     path = here('exhibits', 'figures'),
@@ -1464,3 +1466,87 @@
     height = 6
   )
 
+# Appendix: State BGC rate ranks ---------------------------------------------------------
+  # Load the combined state-level rate data (FBI and OSP)
+  bgc_data =
+    here('data', 'clean', 'background-checks', 'bgc-osp-fbi.csv') |>
+    read_csv()
+  # Set as data.table
+  setDT(bgc_data)
+  # Recode dates
+  bgc_data[, date := date |> ymd()]
+  # Calculate state-level mean BGC rates
+  state_dt =
+    bgc_data[date <= ymd(20221001), .(
+      rate_mean = mean(rate)
+    ), by = state]
+  # Add ranks
+  state_dt[, rank_rate_mean := frank(-rate_mean, ties.method = 'first')]
+  # Load FBI (state-level) data
+  state_bgc_data =
+    here('data', 'clean', 'background-checks', 'bgc-fbi-200001-202403.csv') |>
+    read_csv() |>
+    select(state, date, totals_standard_sales) |>
+    setDT()
+  # Subset to months matching the combined dataset
+  state_bgc_data %<>% .[date %in% unique(bgc_data$date)]
+  # Calculate state-level mean BGC
+  state_fbi = state_bgc_data[, .(
+    level_mean = mean(totals_standard_sales)
+  ), by = state]
+  # Add ranks
+  state_fbi[, rank_level_mean := frank(-level_mean, ties.method = 'first')]
+  # Combine datasets
+  state_dt = merge(state_dt, state_fbi, by = 'state', all = TRUE)
+  # Add indicator for whether the state is in our standard analyses
+  state_dt[, grp := fcase(
+    state %in% c(drop_states, border_states), 'Dropped',
+    state == 'Oregon', 'Oregon',
+    default = 'Included'
+  )]
+  # Recode group variable as factor
+  state_dt[, `:=`(
+    grp = factor(grp, levels = c('Oregon', 'Included', 'Dropped'), ordered = TRUE)
+  )]
+  # Add state abbreviations
+  state_dt %<>%
+    merge(
+      y = data.table(state = state.name, state_abb = state.abb),
+      by = 'state', all.x = TRUE, all.y = FALSE
+    )
+  # Plot rank against mean rate (colored by group)
+  gg_rate = ggplot(
+    data = state_dt,
+    aes(x = rank_rate_mean, y = rate_mean, fill = grp)
+  ) +
+  geom_col() +
+  geom_text(
+    aes(label = state_abb, y = rate_mean + 20),
+    size = 4,
+    family = 'Fira Sans Condensed',
+    color = 'grey20',
+    position = position_stack(vjust = 1)
+  ) +
+  scale_fill_manual('', values = c('#311B92', '#FFCC80', 'grey90')) +
+  theme_void(base_size = 16, base_family = 'Fira Sans Condensed') +
+  theme(
+    legend.position = 'bottom',
+    axis.text.y = element_text(hjust = 1.5, size = 12),
+    axis.title.y = element_text(angle = 90),
+  ) +
+  scale_y_continuous(
+    'Avg. monthly firearm background checks per 100K',
+    labels = scales::comma
+  ) +
+  coord_cartesian(
+    xlim = c(1.5, 47.5),
+  )
+  # Save plot with timeline
+  ggsave(
+    plot = gg_rate,
+    path = here('exhibits', 'figures'),
+    filename = 'state-bgc-rate-rank.png',
+    device = ragg::agg_png,
+    width = 12,
+    height = 5
+  )
