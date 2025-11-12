@@ -1,5 +1,5 @@
 # Notes ----------------------------------------------------------------------------------
-#   Goal:   Combine datasets
+#   Goal:   Combine datasets; create analysis-ready background-check dataset
 #   Time:   ~ 5 seconds
 
 # Output ---------------------------------------------------------------------------------
@@ -31,17 +31,29 @@
   # Keeping one entry per month-date for Oregon; replace FBI Oregon with OSP Oregon
   # Slim down Oregon data (we just need county-month)
   oregon_bgc_data %<>% distinct(month_date, .keep_all = TRUE)
-  oregon_bgc_data %<>% mutate(state = 'Oregon')
-  oregon_bgc_data %<>% select(state, month_date, per_month_total) |> setDT()
-  # Fix names
-  names(oregon_bgc_data) = c('state', 'date', 'rate')
+  oregon_bgc_data %<>%
+    transmute(
+      state = 'Oregon',
+      date = month_date,
+      rate = per_month_total,
+      pop = state_population
+    ) %>%
+    setDT()
   # Slim down FBI data
   state_bgc_data = state_bgc_data[state != 'Oregon', ]
-  state_bgc_data  %<>% select(state, date, rate_standard_sales)
-  # Fix names
-  names(state_bgc_data) = c('state', 'date', 'rate')
+  state_bgc_data %<>% transmute(
+    state,
+    date,
+    rate = rate_standard_sales,
+    pop = population
+  )
   # Combine
-  bgc_data = rbind(state_bgc_data, oregon_bgc_data)
+  bgc_data =
+    rbindlist(
+      list(state_bgc_data, oregon_bgc_data),
+      use.names = TRUE,
+      fill = TRUE
+    )
   # Define treatment
   bgc_data[, `:=`(
     treated_october = if_else(state == 'Oregon' & date >= '2022-10-01', 1, 0),

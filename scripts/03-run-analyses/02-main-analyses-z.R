@@ -72,6 +72,8 @@
   bgc_data =
     here('data', 'clean', 'background-checks', 'bgc-osp-fbi.csv') |>
     fread()
+  # Drop population
+  bgc_data[, pop := NULL]
   # Recode dates
   bgc_data[, date := date |> ymd()]
   # Calculate pre-treatment, state-level mean and standard deviation of rate
