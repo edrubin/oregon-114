@@ -284,7 +284,6 @@
     con = here('exhibits', 'tables', 'tab-01-sdid-main.tex')
   )
 
-
 # Table 2: Comparing estimators ----------------------------------------------------------
   # Choose set of results
   res = results_nonborder
