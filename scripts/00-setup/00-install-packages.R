@@ -9,8 +9,10 @@
   pacman::p_load(
     renv, here, devtools, tidyverse, readxl, janitor, tidyr, magrittr, data.table,
     tidycensus, lubridate, gsynth, zoo, ggpubr, cowplot, eventstudyr, fixest,
-    rmarkdown, kableExtra, httpgd
+    rmarkdown, kableExtra
   )
+  # Install `httpgd` from GitHub
+  remotes::install_github("nx10/httpgd")
   # Install `synthdid` from GitHub
   devtools::install_github('synth-inference/synthdid')
   # Initialize `renv`

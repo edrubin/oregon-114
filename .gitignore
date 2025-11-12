@@ -5,7 +5,7 @@ scripts/01-scrape-nics/pdfs/*
 scripts/01-scrape-nics/venv/*
 
 # Temporary
-scripts/03-run-analyses/03-hypothetical.R
+scripts/03-run-analyses/04-hypothetical.R
 
 # Cleaned data
 data/clean/*
