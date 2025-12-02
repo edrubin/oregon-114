@@ -1,0 +1,16 @@
+25000        Massachusetts
+25001        Barnstable County
+25003        Berkshire County
+25005        Bristol County
+25007        Dukes County
+25009        Essex County
+25011        Franklin County
+25013        Hampden County
+25015        Hampshire County
+25017        Middlesex County
+25019        Nantucket County
+25021        Norfolk County
+25023        Plymouth County
+25025        Suffolk County
+25027        Worcester County
+
