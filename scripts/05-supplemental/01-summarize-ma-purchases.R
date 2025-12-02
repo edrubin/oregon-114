@@ -1,6 +1,6 @@
 # Notes ----------------------------------------------------------------------------------
 #   Goal:   Compare purchase location to home location for MA firearm purchases
-#   Time:   Short.
+#   Time:   < 7 seconds
 
 # Output ---------------------------------------------------------------------------------
 
@@ -203,13 +203,17 @@
 
 
 # Histogram of distances -----------------------------------------------------------------
+  # Define max distance for plotting
+  max_dist = 150
   # Plot histogram of distances
-  ggplot(
-    data = ag_dist[!is.na(dist), .(dist = rep(dist, n))],
+  dist_plot = ggplot(
+    data =
+      ag_dist[!is.na(dist), .(dist = rep(dist, n))] |>
+      fmutate(dist = fifelse(dist > max_dist, max_dist, dist)),
     aes(x = dist),
   ) +
   geom_histogram(
-    bins = 250,
+    bins = ceiling(max_dist * .7),
     fill = col_trt,
     color = col_trt,
   ) +
@@ -220,21 +224,27 @@
   ) +
   scale_x_continuous(
     'Firearm buyer\'s distance to dealer (km)',
+    breaks = seq(0, max_dist, by = 50),
+    labels = c(
+      seq(0, max_dist - 50, by = 50) |> comma(),
+      paste0(max_dist, '+')
+    )
   ) +
   theme_minimal(
     base_size = 16,
     base_family = 'Fira Sans Condensed',
   ) +
   coord_cartesian(
-    xlim = c(0, 150)
+    xlim = c(0, max_dist),
   )
-  # Save plot
+# Save plot
   ggsave(
+    plot = dist_plot,
     path = here('exhibits', 'figures'),
-    # filename = 'mass-hist-purchase-distances.pdf',
-    # device = cairo_pdf,
-    filename = 'mass-hist-purchase-distances.png',
-    device = ragg::agg_png,
+    filename = 'mass-hist-purchase-distances.pdf',
+    device = cairo_pdf,
+    # filename = 'mass-hist-purchase-distances.png',
+    # device = ragg::agg_png,
     width = 12,
     height = 5
   )
