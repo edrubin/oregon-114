@@ -25,11 +25,10 @@
   # Load definitions
   here('scripts', '03-run-analyses', '00-define-groups.R') |> source()
 
-# Figure: Google Trends ------------------------------------------------------------------
+# Figure: Google Trends, firearm topics --------------------------------------------------
   # Define trends location
   dir_trends = here('data', 'raw', 'google-trends')
   # Load Google Trends datasets
-  # d1 = here(dir_trends, 'trends-firearm-or.csv') |> fread()
   d1 = here(dir_trends, 'trends-backgroundcheck-or.csv') |> fread()
   d2 = here(dir_trends, 'trends-magazine(firearms)-or.csv') |> fread()
   d3 = here(dir_trends, 'trends-measure114-or.csv') |> fread()
@@ -122,6 +121,100 @@
     plot = gg_tmp,
     path = here('exhibits', 'figures'),
     filename = 'google-trends.png',
+    device = ragg::agg_png,
+    width = 10,
+    height = 7
+  )
+  rm(gg_tmp)
+
+# Figure: Google Trends, general topics --------------------------------------------------
+  # Define trends location
+  dir_trends = here('data', 'raw', 'google-trends', 'general-topics')
+  # Load Google Trends datasets
+  t1 = here(dir_trends, 'trends-oregon.csv') |> fread(skip = 1)
+  t2 = here(dir_trends, 'trends-portland.csv') |> fread(skip = 1)
+  t3 = here(dir_trends, 'trends-eugene.csv') |> fread(skip = 1)
+  t4 = here(dir_trends, 'trends-medford.csv') |> fread(skip = 1)
+  # Fix names
+  col_names = c('day', 'meas', 'ducks', 'wordle', 'swift', 'covid')
+  setnames(t1, new = col_names)
+  setnames(t2, new = col_names)
+  setnames(t3, new = col_names)
+  setnames(t4, new = col_names)
+  # Add location
+  t1[, location := 'Oregon']
+  t2[, location := 'Portland']
+  t3[, location := 'Eugene']
+  t4[, location := 'Medford']
+  # Stack
+  trends_dt = rbindlist(list(t1, t2, t3, t4), use.names = TRUE, fill = TRUE)
+  # To long format
+  trends_dt %<>%
+    melt(
+      id.vars = c('day', 'location'),
+      variable.name = 'topic',
+      value.name = 'interest'
+    )
+  # Set factor level order of topics
+  lvls = c('meas', 'ducks', 'wordle', 'swift', 'covid')
+  lbls = c('Measure 114', 'Oregon Ducks football', 'Wordle', 'Taylor Swift', 'COVID')
+  trends_dt[, `:=`(
+    topic = factor(
+      topic,
+      levels = lvls,
+      labels = lbls,
+      ordered = TRUE
+    )
+  )]
+  # Order locations
+  trends_dt[, `:=`(
+    location = factor(
+      location,
+      levels = c('Oregon', 'Portland', 'Eugene', 'Medford'),
+      labels = c('Oregon', 'Portland', 'Eugene', 'Medford'),
+      ordered = TRUE
+    )
+  )]
+  # Plot data
+  gg_tmp =
+    ggplot(
+      data = trends_dt,
+      aes(x = day, y = interest, color = topic)
+    ) +
+    geom_hline(yintercept = 0, linewidth = .25) +
+    geom_vline(
+      xintercept = ymd(20221108),
+      linewidth = .25,
+      linetype = 'dashed'
+    ) +
+    geom_line(linewidth = .5) +
+    geom_point(size = .3) +
+    scale_y_continuous(
+      'Google Trends search interest',
+      labels = comma
+    ) +
+    scale_x_date(
+      'Day of sample',
+    ) +
+    scale_color_viridis_d(
+      'Google Trends topic',
+      labels = lbls,
+      end = .85,
+      direction = -1,
+      option = 'magma',
+    ) +
+    theme_minimal(base_size = 16, base_family = 'Fira Sans Condensed') +
+    theme(
+      legend.position = 'bottom',
+      plot.margin = margin(0, 0, 0, 0),
+      legend.margin = margin(0, 0, 0, 0),
+    ) +
+    facet_wrap(vars(location), ncol = 1, dir = 'v')
+  # Save plot
+  ggsave(
+    plot = gg_tmp,
+    path = here('exhibits', 'figures'),
+    filename = 'google-trends-general.png',
     device = ragg::agg_png,
     width = 10,
     height = 7
