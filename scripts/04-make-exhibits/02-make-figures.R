@@ -197,7 +197,7 @@
       'Day of sample',
     ) +
     scale_color_viridis_d(
-      'Google Trends topic',
+      'Google search',
       labels = lbls,
       end = .85,
       direction = -1,
