@@ -42,3 +42,6 @@ Rscript --vanilla 03-analyze/01-main-analyses.R
 # Script to produce exhibits
 Rscript --vanilla 04-make-exhibits/01-make-tables.R
 Rscript --vanilla 04-make-exhibits/01-make-figures.R
+
+# Script for supplemental exhibits/analyses
+Rscript --vanilla 05-supplemental/summarize-ma-purchases.R

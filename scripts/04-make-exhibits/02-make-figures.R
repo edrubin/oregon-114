@@ -9,7 +9,7 @@
   # Load packages
   pacman::p_load(
     here, magrittr, tidyverse, readxl, data.table, lubridate, sf,
-    ggplot2, cowplot, scales, synthdid, viridis
+    ggplot2, cowplot, scales, synthdid, viridis, extrafont
   )
   # Define colors
   col_trt = viridis::magma(1e2)[40]
@@ -134,20 +134,23 @@
   t1 = here(dir_trends, 'trends-oregon.csv') |> fread(skip = 1)
   t2 = here(dir_trends, 'trends-portland.csv') |> fread(skip = 1)
   t3 = here(dir_trends, 'trends-eugene.csv') |> fread(skip = 1)
-  t4 = here(dir_trends, 'trends-medford.csv') |> fread(skip = 1)
+  t4 = here(dir_trends, 'trends-bend.csv') |> fread(skip = 1)
+  t5 = here(dir_trends, 'trends-medford.csv') |> fread(skip = 1)
   # Fix names
   col_names = c('day', 'meas', 'ducks', 'wordle', 'swift', 'covid')
   setnames(t1, new = col_names)
   setnames(t2, new = col_names)
   setnames(t3, new = col_names)
   setnames(t4, new = col_names)
+  setnames(t5, new = col_names)
   # Add location
   t1[, location := 'Oregon']
   t2[, location := 'Portland']
   t3[, location := 'Eugene']
-  t4[, location := 'Medford']
+  t4[, location := 'Bend']
+  t5[, location := 'Medford']
   # Stack
-  trends_dt = rbindlist(list(t1, t2, t3, t4), use.names = TRUE, fill = TRUE)
+  trends_dt = rbindlist(list(t1, t2, t3, t4, t5), use.names = TRUE, fill = TRUE)
   # To long format
   trends_dt %<>%
     melt(
@@ -170,15 +173,15 @@
   trends_dt[, `:=`(
     location = factor(
       location,
-      levels = c('Oregon', 'Portland', 'Eugene', 'Medford'),
-      labels = c('Oregon', 'Portland', 'Eugene', 'Medford'),
+      levels = c('Oregon', 'Portland', 'Eugene', 'Bend', 'Medford'),
+      labels = c('Oregon', 'Portland', 'Eugene', 'Bend', 'Medford'),
       ordered = TRUE
     )
   )]
   # Plot data
-  gg_tmp =
+  gg_list = lapply(X = trends_dt$location |> unique(), FUN = function(l) {
     ggplot(
-      data = trends_dt,
+      data = trends_dt[location == l],
       aes(x = day, y = interest, color = topic)
     ) +
     geom_hline(yintercept = 0, linewidth = .25) +
@@ -195,6 +198,8 @@
     ) +
     scale_x_date(
       'Day of sample',
+      date_breaks = '1 month',
+      date_labels = '%b'
     ) +
     scale_color_viridis_d(
       'Google search',
@@ -208,8 +213,50 @@
       legend.position = 'bottom',
       plot.margin = margin(0, 0, 0, 0),
       legend.margin = margin(0, 0, 0, 0),
+    )
+  })
+  # Define formatting to strip out superfluous theme elements
+  top_theme =
+    theme(
+      legend.position = 'none',
+      axis.text.x = element_blank(),
+      axis.title = element_blank(),
+      plot.subtitle = element_text(face = 'italic', size = 14)
+    )
+  # Combine the plots
+  gg_tmp =
+    plot_grid(
+      gg_list[[1]] +
+        ggtitle('Oregon') + 
+        theme(
+          legend.position = 'none',
+          axis.text.x = element_blank(),
+          axis.title = element_blank(),
+          plot.title = element_text(face = 'bold', size = 16)
+        ),
+      gg_list[[2]] + top_theme + ggtitle('', subtitle = 'Portland'),
+      gg_list[[3]] + top_theme + ggtitle('', subtitle = 'Eugene'),
+      gg_list[[4]] + top_theme + ggtitle('', subtitle = 'Bend'),
+      gg_list[[5]] +
+        theme(
+          axis.title.y = element_blank(),
+          legend.position = 'none',
+          plot.subtitle = element_text(face = 'italic', size = 14)
+        ) +
+        ggtitle('', subtitle = 'Medford/Klamath Falls'),
+      gg_list[[5]] |> get_legend(),
+      ncol = 1,
+      rel_heights = c(1, .5, .5, .5, .63, .1)
     ) +
-    facet_wrap(vars(location), ncol = 1, dir = 'v')
+    theme(plot.margin = margin(0, 0, 0, 30)) +
+    draw_label(
+      'Google Trends search interest',
+      x = -.02,
+      y = .5,
+      angle = 90,
+      fontfamily = 'Fira Sans Condensed',
+      size = 15
+    )
   # Save plot
   ggsave(
     plot = gg_tmp,
@@ -217,9 +264,9 @@
     filename = 'google-trends-general.png',
     device = ragg::agg_png,
     width = 10,
-    height = 7
+    height = 11
   )
-  rm(gg_tmp)
+  rm(gg_tmp, gg_list)
 
 # Figure: Main synth comparison ----------------------------------------------------------
   # Load the data
