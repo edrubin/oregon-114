@@ -39,8 +39,12 @@
   results_brady =
     here('data', 'clean', 'analyses', 'results-brady.qs') |>
     qread()
+  results_recheck =
+    here('data', 'clean', 'analyses', 'results-recheck.qs') |>
+    qread()
   # Make a list of results
-  res_list = list(results_nonborder, results_nonpoc, results_nonp2p, results_brady)
+  res_list =
+  list(results_nonborder, results_nonpoc, results_nonp2p, results_brady, results_recheck)
 
 # Function to wrap vector entries in parentheses -----------------------------------------
   # The function
@@ -196,7 +200,8 @@
         n_st - n_distinct(border_states),
         n_st - n_distinct(poc_states),
         n_st - n_distinct(p2p_states),
-        n_st - n_distinct(brady_states)
+        n_st - n_distinct(brady_states),
+        n_st - n_distinct(recheck_states)
       )
     ))
   # Sample
@@ -208,22 +213,23 @@
         'Non-border',
         'Non-POC',
         'Non-P2P',
-        'Non-Brady-exempt'
+        'Non-Brady-ex.',
+        'Non-Recheck'
       )
     ))
   # Define column names
   c_names = c(
     'Time frame',
-    paste0('(', 1:4, ')')
+    paste0('(', 1:5, ')')
   )
   # Start latex table
 # NOTE Some formatting done by hand on Overleaf
   main_table |>
-    kbl(format = 'latex', align = 'lcccc', col.names = c_names, booktabs = TRUE) |>
+    kbl(format = 'latex', align = 'lccccc', col.names = c_names, booktabs = TRUE) |>
     column_spec(1, italic = TRUE) |>
     save_kable(here('exhibits', 'tables', 'tab-01a-sdid-main.tex'))
   acc_table |>
-    kbl(format = 'latex', align = 'lcccc', col.names = c_names, booktabs = TRUE) |>
+    kbl(format = 'latex', align = 'lccccc', col.names = c_names, booktabs = TRUE) |>
     column_spec(1, italic = TRUE) |>
     save_kable(here('exhibits', 'tables', 'tab-01b-sdid-main.tex'))
   # Load saved tables
@@ -241,19 +247,19 @@
     t1 |> head(5),
     paste0(
       '\\multicolumn{5}{l}{\\hspace*{-.5em}',
-      '\\textit{\\textbf{Panel A:} Monthly effect (per 100k)}} \\\\',
+      '\\textit{\\textbf{Panel A:} Monthly effect (per 100k)}} \\\\'
     ),
     t1 |> tail(-5) |> head(-2),
     '\\midrule',
     paste0(
       '\\multicolumn{5}{l}{\\hspace*{-.5em}',
-      '\\textit{\\textbf{Panel B:} Accumulated effect (per 100k)}} \\\\',
+      '\\textit{\\textbf{Panel B:} Accumulated effect (per 100k)}} \\\\'
     ),
     t2 |> tail(-5)
   )
   # Update alignment definition
   final_table[grepl('lcc', final_table)] =
-    '\\begin{tabular}{@{}lcccc@{}}'
+    '\\begin{tabular}{@{}lccccc@{}}'
   # Italicize and indent time frame title
   final_table %<>% str_replace('Time frame', '\\\\quad\\\\textit{Time frame}')
   # Drop orphan linespace

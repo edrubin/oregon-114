@@ -101,6 +101,7 @@
       if (.subset == 'No POC') bgc_dt %<>% .[!(state %in% poc_states), ]
       if (.subset == 'No border') bgc_dt %<>% .[!(state %in% border_states), ]
       if (.subset == 'No Brady exempt') bgc_dt %<>% .[!(state %in% brady_states), ]
+      if (.subset == 'No recheck') bgc_dt %<>% .[!(state %in% recheck_states), ]
     }
     # Subset data temporally
     # If multiple subsets: take implied date subsets and then bind them together
@@ -437,6 +438,56 @@
     ) |>
     rbindlist(use.names = TRUE, fill = TRUE)
 
+# Estimates: Drop re-check states --------------------------------------------------------
+  # Estimates for dropping "re-check" states
+  results_recheck =
+    list(
+      # Non-recheck states, all dates, total effect (all post periods)
+      est_fun(
+        .data = bgc_data,
+        .subset = 'No recheck',
+        .inf = TRUE
+      ),
+      # Non-recheck states, one treated month: 2022-10-01 (October)
+      est_fun(
+        .data = bgc_data,
+        .subset = 'No recheck',
+        .dates_start = -Inf,
+        .dates_stop = '2022-10-01',
+        .dates_label = 'October',
+        .inf = TRUE
+      ),
+      # Non-recheck states, treatment is Nov. and Dec. 2022 (Post-election; pre-stay)
+      est_fun(
+        .data = bgc_data,
+        .subset = 'No recheck',
+        .dates_start = c(-Inf, '2022-11-01'),
+        .dates_stop = c('2022-09-01', '2022-12-01'),
+        .dates_label = 'Post-election; pre-stay',
+        .inf = TRUE
+      ),
+      # Non-recheck states, first three months of 2023 (early post-stay)
+      est_fun(
+        .data = bgc_data,
+        .subset = 'No recheck',
+        .dates_start = c(-Inf, '2023-01-01'),
+        .dates_stop = c('2022-09-01', '2023-03-01'),
+        .dates_label = 'Early post-stay',
+        .inf = TRUE
+      ),
+      # Non-recheck states, after April 2023 (long run)
+      est_fun(
+        .data = bgc_data,
+        .subset = 'No recheck',
+        .dates_start = c(-Inf, '2023-04-01'),
+        .dates_stop = c('2022-09-01', Inf),
+        .dates_label = 'Long run',
+        .inf = TRUE
+      ),
+      NULL
+    ) |>
+    rbindlist(use.names = TRUE, fill = TRUE)
+
 # Save estimate objects ------------------------------------------------------------------
   # Save
   qsave(
@@ -462,5 +513,10 @@
   qsave(
     x = results_brady,
     file = here('data', 'clean', 'analyses', 'results-brady.qs'),
+    preset = 'high'
+  )
+  qsave(
+    x = results_recheck,
+    file = here('data', 'clean', 'analyses', 'results-recheck.qs'),
     preset = 'high'
   )

@@ -29,3 +29,7 @@
     'South Carolina', 'South Dakota', 'Texas', 'Utah', 'West Virginia', 'Wyoming',
     'Iowa', 'Mississippi', 'Ohio'
   )
+  # States that issued rechecks or have other BGC spikes
+  recheck_states = c(
+    'Illinois', 'Kentucky', 'New Hampshire', 'Delaware', 'Washington'
+  )
