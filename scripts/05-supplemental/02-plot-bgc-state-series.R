@@ -92,7 +92,6 @@
     multiple_outlier = fmax(multiple_outlier)
   ), by = state]
 
-  
   # Total permits
   plot_ly(
     data = bgc_dt[permit_outlier == TRUE | state == 'Oregon'],
@@ -182,7 +181,7 @@
   plot_ly(
     data = bgc_dt[multiple_outlier == TRUE | state == 'Oregon'],
     x = ~date,
-    y = ~other,
+    y = ~multiple,
     color = ~state,
     colors = viridis::magma(n = 10, end = .9),
     type = 'scatter',

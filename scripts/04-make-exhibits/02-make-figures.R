@@ -1233,6 +1233,8 @@
     fread()
   # Drop Alabama and North Carolina
   bgc_data %<>% .[!(state %in% drop_states)]
+  # Drop border states
+  bgc_data %<>% .[!(state %in% border_states)]
   # Sum BGCs and population by month and OR vs. non-OR
   bgc_dt = bgc_data[, .(
     bgc = sum(totals_standard_sales),
@@ -1605,6 +1607,8 @@
     width = 6.5,
     height = 6
   )
+  # Correlations of mapped variables
+  or_dt[, .(support = yes, bgc_100k = bgc / pop * 1e5)] |> cor()
 
 # Appendix: State BGC rate ranks ---------------------------------------------------------
   # Load the combined state-level rate data (FBI and OSP)
