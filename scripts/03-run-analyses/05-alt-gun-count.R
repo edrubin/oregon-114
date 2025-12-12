@@ -1,5 +1,5 @@
 # Notes ----------------------------------------------------------------------------------
-#   Goal:   Run main analyses (synth DID, SCM, and DID)
+#   Goal:   Run alternative gun-count analysis (synth DID, SCM, and DID)
 #   Time:   ~ 15 minutes with 10 cores (and 500 placebo replications)
 
 # Output ---------------------------------------------------------------------------------
@@ -8,7 +8,6 @@
 #   data/clean/analyses/results-nonp2p.qs
 #   data/clean/analyses/results-nonborder.qs
 #   data/clean/analyses/results-brady.qs
-#   data/clean/analyses/results-recheck.qs
 
 # Data notes -----------------------------------------------------------------------------
 #   - We always drop Alabama, North Carolina, Alaska, and Hawaii
@@ -63,20 +62,6 @@
 # Define sets of states ------------------------------------------------------------------
   # Load definitions
   here('scripts', '03-run-analyses', '00-define-groups.R') |> source()
-
-# Load data ------------------------------------------------------------------------------
-# NOTE Data run 2018-03-01 to 2023-03-01 and use OSP data in place of FBI data for Oregon
-# Outcomes:
-#   - total OSP checks (approved, canceled and denied)
-#   - FBI standard sales (HG + LG + other + multiple)
-  # Load the data
-  bgc_data =
-    here('data', 'clean', 'background-checks', 'bgc-osp-fbi.csv') |>
-    fread()
-  # Drop population
-  bgc_data[, pop := NULL]
-  # Recode dates
-  bgc_data[, date := date |> ymd()]
 
 # Function: Synthdid estimates for specified subsets -------------------------------------
 # NOTE .dates_start and .dates_stop must be the same length (and are inclusive)
@@ -193,6 +178,86 @@
     # Return
     return(r_dt)
   }
+
+# Load data ------------------------------------------------------------------------------
+  # Load FBI data
+  fbi_dt =
+    here('data', 'clean', 'background-checks', 'bgc-fbi-200001-202403.csv') |>
+    fread()
+  # Approximate guns as handguns + longguns + 2 * multiple (then convert to per 100k rate)
+  fbi_dt %<>%
+    .[, .(
+      date = paste0(year, '-', month, '-01') |> ymd(),
+      state,
+      rate = (handgun + long_gun + 2 * multiple) / population * 1e5
+    )]
+  # Load the OSP-FBI data used in main analyses
+  bgc_data =
+    here('data', 'clean', 'background-checks', 'bgc-osp-fbi.csv') |>
+    fread()
+  # Drop population and rate
+  bgc_data[, c('pop', 'rate') := NULL]
+  # Merge
+  bgc_data =
+    merge(
+      x = bgc_data,
+      y = fbi_dt,
+      by = c('state', 'date'),
+      all.x = TRUE,
+      all.y = FALSE
+    )
+  # Date to Date class
+  bgc_data[, date := as.Date(date)]
+
+# Estimates: Non-border states -----------------------------------------------------------
+  # Estimates for non-border states
+  results_nonborder =
+    list(
+      # Non-border states, all dates, total effect (all post periods)
+      est_fun(
+        .data = bgc_data,
+        .subset = 'No border',
+        .inf = TRUE
+      ),
+      # Non-border states, one treated month: 2022-10-01 (October)
+      est_fun(
+        .data = bgc_data,
+        .subset = 'No border',
+        .dates_start = -Inf,
+        .dates_stop = '2022-10-01',
+        .dates_label = 'October',
+        .inf = TRUE
+      ),
+      # Non-border states, treatment is Nov. and Dec. 2022 (Post-election; pre-stay)
+      est_fun(
+        .data = bgc_data,
+        .subset = 'No border',
+        .dates_start = c(-Inf, '2022-11-01'),
+        .dates_stop = c('2022-09-01', '2022-12-01'),
+        .dates_label = 'Post-election; pre-stay',
+        .inf = TRUE
+      ),
+      # Non-border states, first three months of 2023 (early post-stay)
+      est_fun(
+        .data = bgc_data,
+        .subset = 'No border',
+        .dates_start = c(-Inf, '2023-01-01'),
+        .dates_stop = c('2022-09-01', '2023-03-01'),
+        .dates_label = 'Early post-stay',
+        .inf = TRUE
+      ),
+      # Non-border states, after April 2023 (long run)
+      est_fun(
+        .data = bgc_data,
+        .subset = 'No border',
+        .dates_start = c(-Inf, '2023-04-01'),
+        .dates_stop = c('2022-09-01', Inf),
+        .dates_label = 'Long run',
+        .inf = TRUE
+      ),
+      NULL
+    ) |>
+    rbindlist(use.names = TRUE, fill = TRUE)
 
 # Estimates: All states ------------------------------------------------------------------
   # Estimates for all states
@@ -493,31 +558,31 @@
   # Save
   qsave(
     x = results_all,
-    file = here('data', 'clean', 'analyses', 'results-all.qs'),
+    file = here('data', 'clean', 'analyses', 'results-alt-guns-all.qs'),
     preset = 'high'
   )
   qsave(
     x = results_nonpoc,
-    file = here('data', 'clean', 'analyses', 'results-nonpoc.qs'),
+    file = here('data', 'clean', 'analyses', 'results-alt-guns-nonpoc.qs'),
     preset = 'high'
   )
   qsave(
     x = results_nonp2p,
-    file = here('data', 'clean', 'analyses', 'results-nonp2p.qs'),
+    file = here('data', 'clean', 'analyses', 'results-alt-guns-nonp2p.qs'),
     preset = 'high'
   )
   qsave(
     x = results_nonborder,
-    file = here('data', 'clean', 'analyses', 'results-nonborder.qs'),
+    file = here('data', 'clean', 'analyses', 'results-alt-guns-nonborder.qs'),
     preset = 'high'
   )
   qsave(
     x = results_brady,
-    file = here('data', 'clean', 'analyses', 'results-brady.qs'),
+    file = here('data', 'clean', 'analyses', 'results-alt-guns-brady.qs'),
     preset = 'high'
   )
   qsave(
     x = results_recheck,
-    file = here('data', 'clean', 'analyses', 'results-recheck.qs'),
+    file = here('data', 'clean', 'analyses', 'results-alt-guns-recheck.qs'),
     preset = 'high'
   )
