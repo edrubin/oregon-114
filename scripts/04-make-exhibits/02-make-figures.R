@@ -1304,6 +1304,101 @@
     height = 7.5
   )
 
+# Appendix: Sandy Hook time series, Oregon vs. others, state-level -----------------------
+  # Define dates of interest with labels
+  date_dt =
+    list(
+      # data.table(d = '20081104', l = 'Obama elected'),
+      data.table(d = '20121214', l = 'Sandy Hook'),
+      # data.table(d = '20141202', l = 'San Bernardino'),
+      # data.table(d = '20180214', l = 'Parkland'),
+      # data.table(d = '20200120', l = 'COVID-19 begins'),
+      # data.table(d = '20220524', l = 'Uvalde'),
+      # data.table(d = '20221108', l = 'Meas. 114'),
+      NULL
+    ) |> rbindlist()
+  date_dt[, d := ymd(d)]
+  # Load the data
+  bgc_data =
+    here('data', 'clean', 'background-checks', 'bgc-fbi-200001-202403.csv') |>
+    fread()
+  # Drop Alabama and North Carolina
+  bgc_data %<>% .[!(state %in% drop_states)]
+  # Drop border states
+  bgc_data %<>% .[!(state %in% border_states)]
+  # Sum BGCs and population by month and OR vs. non-OR
+  bgc_dt =
+    bgc_data[, .(
+      bgc = fsum(totals_standard_sales),
+      pop = fsum(population)
+    ), by = .(state, year, month)]
+  bgc_dt[, `:=`(
+    grp =
+      factor(
+        ifelse(state == 'Oregon', 'OR', 'Non-OR'),
+        levels = c('OR', 'Non-OR'),
+        labels = c('Oregon', 'Others'),
+        ordered = TRUE
+      )
+  )]
+  # Calculate BGC rate per 100k
+  bgc_dt[, rate := bgc / pop * 1e5]
+  # Fix date
+  bgc_dt[, date := ymd(paste0(year, '-', month, '-01'))]
+  # Drop dates to desired range
+  d1 = ymd(20110101)
+  dn = ymd(20141231)
+  bgc_dt %<>% .[between(date, d1, dn)]
+  # Impose date restrictions
+  date_dt %<>% .[between(d, d1, dn)]
+  # Time-series figure
+  gg_tmp =
+    ggplot(
+      data = bgc_dt,
+      aes(x = date, y = rate)
+    ) +
+    # Axis
+    geom_hline(yintercept = 0, linewidth = .25) +
+    # Dates
+    geom_vline(
+      data = date_dt,
+      aes(xintercept = d),
+      linewidth = 2,
+      alpha = .3,
+      color = col_wk[6],
+    ) +
+    geom_text(
+      data = date_dt,
+      aes(x = d, y = 0, label = l),
+      hjust = -.01,
+      vjust = 1.8,
+      size = 4.5,
+      family = 'Fira Sans Condensed',
+      color = col_wk[6],
+    ) +
+    # Time series
+    geom_line(aes(group = state, color = grp, alpha = grp, linewidth = grp)) +
+    # geom_point(size = 1.5) +
+    scale_x_date('Month of sample') +
+    scale_y_continuous('Background checks per 100k (FBI)', labels = comma) +
+    scale_color_manual('', values = c(col_trt, col_ctl)) +
+    scale_alpha_manual('', values = c(.8, .7)) +
+    scale_linewidth_manual('', values = c(.8, .2)) +
+    theme_minimal(base_size = 17, base_family = 'Fira Sans Condensed') +
+    theme(legend.position = 'bottom') +
+    guides(color = guide_legend(nrow = 1, override.aes = list(linewidth = 1)))
+  # Save plot with timeline
+  ggsave(
+    plot = gg_tmp,
+    path = here('exhibits', 'figures'),
+    # filename = 'time-series-monthly-fbi-sandy-hook.png',
+    # device = ragg::agg_png,
+    filename = 'time-series-monthly-fbi-sandy-hook.pdf',
+    device = cairo_pdf,
+    width = 11,
+    height = 7.5
+  )
+
 # Appendix: Long-run time series, Oregon vs. others, with data switch --------------------
   # Define dates of interest with labels
   date_dt =
