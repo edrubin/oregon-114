@@ -39,9 +39,16 @@ Rscript --vanilla 02-clean-data/07-combine-fbi-osp.R
 
 # Scripts to analyze the data
 Rscript --vanilla 03-analyze/01-main-analyses.R
+Rscript --vanilla 03-analyze/02-main-analyses-z.R
+Rscript --vanilla 03-analyze/03-main-analyses-log.R
+Rscript --vanilla 03-analyze/04-main-analyses-alt.R
+
 # Script to produce exhibits
-Rscript --vanilla 04-make-exhibits/01-make-tables.R
-Rscript --vanilla 04-make-exhibits/01-make-figures.R
+Rscript --vanilla 04-make-exhibits/01a-make-tables.R
+Rscript --vanilla 04-make-exhibits/01b-make-tables-z.R
+Rscript --vanilla 04-make-exhibits/01c-make-tables-alt.R
+Rscript --vanilla 04-make-exhibits/02-make-figures.R
 
 # Script for supplemental exhibits/analyses
-Rscript --vanilla 05-supplemental/summarize-ma-purchases.R
+Rscript --vanilla 05-supplemental/01-summarize-ma-purchases.R
+Rscript --vanilla 05-supplemental/02-plot-bgc-state-series.R

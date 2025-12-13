@@ -3,11 +3,12 @@
 #   Time:   ~ 15 minutes with 10 cores (and 500 placebo replications)
 
 # Output ---------------------------------------------------------------------------------
-#   data/clean/analyses/results-all.qs
-#   data/clean/analyses/results-nonpoc.qs
-#   data/clean/analyses/results-nonp2p.qs
-#   data/clean/analyses/results-nonborder.qs
-#   data/clean/analyses/results-brady.qs
+#   data/clean/analyses/results-alt-guns-all.qs
+#   data/clean/analyses/results-alt-guns-nonpoc.qs
+#   data/clean/analyses/results-alt-guns-nonp2p.qs
+#   data/clean/analyses/results-alt-guns-nonborder.qs
+#   data/clean/analyses/results-alt-guns-brady.qs
+#   data/clean/analyses/results-alt-guns-brady.qs
 
 # Data notes -----------------------------------------------------------------------------
 #   - We always drop Alabama, North Carolina, Alaska, and Hawaii
@@ -199,6 +200,7 @@
   or_dt = bgc_data[state == 'Oregon']
   # Drop population and rate
   bgc_data[, c('pop', 'rate') := NULL]
+  or_dt[, pop := NULL]
   # Drop Oregon
   bgc_data %<>% .[state != 'Oregon']
   # Merge
@@ -211,7 +213,7 @@
       all.y = FALSE
     )
   # Add Oregon back now
-  bgc_data = rbindlist(list(bgc_data, or_dt))
+  bgc_data = rbindlist(list(bgc_data, or_dt), use.names = TRUE, fill = TRUE)
   # Date to Date class
   bgc_data[, date := as.Date(date)]
   # Order
