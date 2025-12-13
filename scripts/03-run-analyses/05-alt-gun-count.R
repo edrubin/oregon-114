@@ -195,8 +195,12 @@
   bgc_data =
     here('data', 'clean', 'background-checks', 'bgc-osp-fbi.csv') |>
     fread()
+  # Grab Oregon (updating gun rate for all others)
+  or_dt = bgc_data[state == 'Oregon']
   # Drop population and rate
   bgc_data[, c('pop', 'rate') := NULL]
+  # Drop Oregon
+  bgc_data %<>% .[state != 'Oregon']
   # Merge
   bgc_data =
     merge(
@@ -206,8 +210,12 @@
       all.x = TRUE,
       all.y = FALSE
     )
+  # Add Oregon back now
+  bgc_data = rbindlist(list(bgc_data, or_dt))
   # Date to Date class
   bgc_data[, date := as.Date(date)]
+  # Order
+  setorder(bgc_data, state, date)
 
 # Estimates: Non-border states -----------------------------------------------------------
   # Estimates for non-border states
