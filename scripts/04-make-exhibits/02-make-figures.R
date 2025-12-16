@@ -1703,7 +1703,11 @@
     height = 6
   )
   # Correlations of mapped variables
-  or_dt[, .(support = yes, bgc_100k = bgc / pop * 1e5)] |> cor()
+  or_dt[, .(
+    support = yes,
+    bgc_100k = bgc / pop * 1e5,
+    pop_100k = pop / 1e5
+  )] |> cor()
 
 # Appendix: State BGC rate ranks ---------------------------------------------------------
   # Load the combined state-level rate data (FBI and OSP)
